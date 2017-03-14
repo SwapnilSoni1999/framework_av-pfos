@@ -890,13 +890,6 @@ void MediaCodecSource::onMessageReceived(const sp<AMessage> &msg) {
             }
 
             MediaBuffer *mbuf = new MediaBuffer(outbuf->size());
-            if (mbuf == NULL || mbuf->data() == NULL || mbuf->size() == 0) {
-                if ( mbuf )
-                  mbuf->release();
-                signalEOS(err);
-                break;
-            }
-
             sp<MetaData> meta = mbuf->meta_data();
             AVUtils::get()->setDeferRelease(meta);
             mbuf->setObserver(this);
