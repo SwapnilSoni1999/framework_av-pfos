@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 The Android Open Source Project
+ * Copyright (C) 2017 Tristan Marsell
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,10 +181,8 @@ void FastMixer::onStateChange()
         free(mSinkBuffer);
         mSinkBuffer = NULL;
         if (frameCount > 0 && mSampleRate > 0) {
-            // The mixer produces either 16 bit PCM or float output, select
-            // float output if the HAL supports higher than 16 bit precision.
-            mMixerBufferFormat = mFormat.mFormat == AUDIO_FORMAT_PCM_16_BIT ?
-                    AUDIO_FORMAT_PCM_16_BIT : AUDIO_FORMAT_PCM_FLOAT;
+            // Output Audio file format, not fast mixer one
+            mMixerBufferFormat = mFormat.mFormat;
             // FIXME new may block for unbounded time at internal mutex of the heap
             //       implementation; it would be better to have normal mixer allocate for us
             //       to avoid blocking here and to prevent possible priority inversion

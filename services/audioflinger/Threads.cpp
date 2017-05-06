@@ -1,6 +1,7 @@
 /*
 **
 ** Copyright 2012, The Android Open Source Project
+** Copyright (C) 2017, Tristan Marsell
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -2548,7 +2549,7 @@ void AudioFlinger::PlaybackThread::readOutputParameters_l()
         // For best precision, we use float instead of the associated output
         // device format (typically PCM 16 bit).
 
-        mFormat = AUDIO_FORMAT_PCM_FLOAT;
+        mFormat = mOutput->getFormat();
         mFrameSize = mChannelCount * audio_bytes_per_sample(mFormat);
         mBufferSize = mFrameSize * mFrameCount;
 
@@ -2614,7 +2615,7 @@ void AudioFlinger::PlaybackThread::readOutputParameters_l()
     free(mMixerBuffer);
     mMixerBuffer = NULL;
     if (mMixerBufferEnabled) {
-        mMixerBufferFormat = AUDIO_FORMAT_PCM_FLOAT; // also valid: AUDIO_FORMAT_PCM_16_BIT.
+        mMixerBufferFormat = mOutput->getFormat(); // also valid: AUDIO_FORMAT_PCM_16_BIT. //Ignore it
         mMixerBufferSize = mNormalFrameCount * mChannelCount
                 * audio_bytes_per_sample(mMixerBufferFormat);
         (void)posix_memalign(&mMixerBuffer, 32, mMixerBufferSize);
@@ -2622,7 +2623,7 @@ void AudioFlinger::PlaybackThread::readOutputParameters_l()
     free(mEffectBuffer);
     mEffectBuffer = NULL;
     if (mEffectBufferEnabled) {
-        mEffectBufferFormat = AUDIO_FORMAT_PCM_16_BIT; // Note: Effects support 16b only
+        mEffectBufferFormat = mOutput->getFormat(); // Note: Effects support 16b only //Ignore it
         mEffectBufferSize = mNormalFrameCount * mChannelCount
                 * audio_bytes_per_sample(mEffectBufferFormat);
         (void)posix_memalign(&mEffectBuffer, 32, mEffectBufferSize);
@@ -3830,11 +3831,12 @@ AudioFlinger::MixerThread::MixerThread(const sp<AudioFlinger>& audioFlinger, Aud
     }
     if (initFastMixer) {
         audio_format_t fastMixerFormat;
-        if (mMixerBufferEnabled && mEffectBufferEnabled) {
-            fastMixerFormat = AUDIO_FORMAT_PCM_FLOAT;
-        } else {
-            fastMixerFormat = AUDIO_FORMAT_PCM_16_BIT;
-        }
+        //if (mMixerBufferEnabled && mEffectBufferEnabled) {
+        //    fastMixerFormat = AUDIO_FORMAT_PCM_FLOAT;
+        //} else {
+        //    fastMixerFormat = AUDIO_FORMAT_PCM_16_BIT;
+        //}
+        fastMixerFormat = mOutput->getFormat();
         if (mFormat != fastMixerFormat) {
             // change our Sink format to accept our intermediate precision
             mFormat = fastMixerFormat;
@@ -4657,7 +4659,7 @@ AudioFlinger::PlaybackThread::mixer_state AudioFlinger::MixerThread::prepareTrac
                 mAudioMixer->setParameter(
                         name,
                         AudioMixer::TRACK,
-                        AudioMixer::MIXER_FORMAT, (void *)AUDIO_FORMAT_PCM_16_BIT);
+                        AudioMixer::MIXER_FORMAT, (void *)mOutput->getFormat());
                 mAudioMixer->setParameter(
                         name,
                         AudioMixer::TRACK,

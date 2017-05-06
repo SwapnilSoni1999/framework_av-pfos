@@ -1,6 +1,7 @@
 /*
 **
 ** Copyright 2007, The Android Open Source Project
+** Copyright (C) 2017, Tristan Marsell
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -223,7 +224,7 @@ int AudioMixer::getTrackName(audio_channel_mask_t channelMask,
         t->downmixerBufferProvider = NULL;
         t->mPostDownmixReformatBufferProvider = NULL;
         t->mTimestretchBufferProvider = NULL;
-        t->mMixerFormat = AUDIO_FORMAT_PCM_16_BIT;
+        t->mMixerFormat = format;
         t->mFormat = format;
         t->mMixerInFormat = selectMixerInFormat(format);
         t->mDownmixRequiresFormat = AUDIO_FORMAT_INVALID; // no format required
@@ -343,11 +344,11 @@ status_t AudioMixer::track_t::prepareForDownmix()
             && DownmixerBufferProvider::isMultichannelCapable()) {
         DownmixerBufferProvider* pDbp = new DownmixerBufferProvider(channelMask,
                 mMixerChannelMask,
-                AUDIO_FORMAT_PCM_16_BIT /* TODO: use mMixerInFormat, now only PCM 16 */,
+                mMixerInFormat /* TODO: use mMixerInFormat, now only PCM 16 */,
                 sampleRate, sessionId, kCopyBufferFrameCount);
 
         if (pDbp->isValid()) { // if constructor completed properly
-            mDownmixRequiresFormat = AUDIO_FORMAT_PCM_16_BIT; // PCM 16 bit required for downmix
+            mDownmixRequiresFormat = mMixerInFormat; // PCM 16 bit required for downmix
             downmixerBufferProvider = pDbp;
             reconfigureBufferProviders();
             return NO_ERROR;
@@ -1629,6 +1630,7 @@ void AudioMixer::process__OneTrack16BitsStereoNoResampling(state_t* state)
         size_t outFrames = b.frameCount;
 
         switch (t.mMixerFormat) {
+		case AUDIO_FORMAT_PCM_8_24_BIT:
         case AUDIO_FORMAT_PCM_FLOAT:
             do {
                 uint32_t rl = *reinterpret_cast<const uint32_t *>(in);
@@ -1954,6 +1956,10 @@ void AudioMixer::convertMixerFormat(void *out, audio_format_t mixerOutFormat,
             // two int16_t are produced per iteration
             ditherAndClamp((int32_t*)out, (int32_t*)in, sampleCount >> 1);
             break;
+        case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+        case AUDIO_FORMAT_PCM_8_24_BIT:
+			ALOGVV("Dont do anything");
+		break;
         default:
             LOG_ALWAYS_FATAL("bad mixerOutFormat: %#x", mixerOutFormat);
             break;
@@ -1986,6 +1992,7 @@ AudioMixer::hook_t AudioMixer::getTrackHook(int trackType, uint32_t channelCount
         }
     }
     LOG_ALWAYS_FATAL_IF(channelCount > MAX_NUM_CHANNELS);
+    // Disable Resampler at all
     switch (trackType) {
     case TRACKTYPE_NOP:
         return track__nop;
@@ -1997,6 +2004,10 @@ AudioMixer::hook_t AudioMixer::getTrackHook(int trackType, uint32_t channelCount
         case AUDIO_FORMAT_PCM_16_BIT:
             return (AudioMixer::hook_t)\
                     track__Resample<MIXTYPE_MULTI, int32_t, int16_t, int32_t>;
+        case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+        case AUDIO_FORMAT_PCM_8_24_BIT:
+			ALOGVV("Dont do anything");
+			break;
         default:
             LOG_ALWAYS_FATAL("bad mixerInFormat: %#x", mixerInFormat);
             break;
@@ -2010,6 +2021,10 @@ AudioMixer::hook_t AudioMixer::getTrackHook(int trackType, uint32_t channelCount
         case AUDIO_FORMAT_PCM_16_BIT:
             return (AudioMixer::hook_t)
                     track__NoResample<MIXTYPE_MONOEXPAND, int32_t, int16_t, int32_t>;
+        case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+        case AUDIO_FORMAT_PCM_8_24_BIT:
+			ALOGVV("Dont do anything");
+		break;
         default:
             LOG_ALWAYS_FATAL("bad mixerInFormat: %#x", mixerInFormat);
             break;
@@ -2023,6 +2038,10 @@ AudioMixer::hook_t AudioMixer::getTrackHook(int trackType, uint32_t channelCount
         case AUDIO_FORMAT_PCM_16_BIT:
             return (AudioMixer::hook_t)
                     track__NoResample<MIXTYPE_MULTI, int32_t, int16_t, int32_t>;
+        case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+        case AUDIO_FORMAT_PCM_8_24_BIT:
+			ALOGVV("Dont do anything");
+		break;
         default:
             LOG_ALWAYS_FATAL("bad mixerInFormat: %#x", mixerInFormat);
             break;
@@ -2062,6 +2081,10 @@ AudioMixer::process_hook_t AudioMixer::getProcessHook(int processType, uint32_t 
         case AUDIO_FORMAT_PCM_16_BIT:
             return process_NoResampleOneTrack<MIXTYPE_MULTI_SAVEONLY,
                     int16_t, float, int32_t>;
+        case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+        case AUDIO_FORMAT_PCM_8_24_BIT:
+			ALOGVV("Dont do anything");
+		break;
         default:
             LOG_ALWAYS_FATAL("bad mixerOutFormat: %#x", mixerOutFormat);
             break;
@@ -2075,6 +2098,10 @@ AudioMixer::process_hook_t AudioMixer::getProcessHook(int processType, uint32_t 
         case AUDIO_FORMAT_PCM_16_BIT:
             return process_NoResampleOneTrack<MIXTYPE_MULTI_SAVEONLY,
                     int16_t, int16_t, int32_t>;
+        case AUDIO_FORMAT_PCM_24_BIT_PACKED:
+        case AUDIO_FORMAT_PCM_8_24_BIT:
+			ALOGVV("Dont do anything");
+		break;
         default:
             LOG_ALWAYS_FATAL("bad mixerOutFormat: %#x", mixerOutFormat);
             break;
