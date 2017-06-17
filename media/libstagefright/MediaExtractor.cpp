@@ -276,13 +276,7 @@ sp<MediaExtractor> MediaExtractor::CreateFromService(
            ret->setDrmFlag(false);
        }
     }
-    if (ret != NULL) {
-       if (isDrm) {
-          ret->setDrmFlag(true);
-       } else {
-          ret->setDrmFlag(false);
-       }
-    }
+
     return ret;
 }
 
